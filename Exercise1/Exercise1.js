@@ -1,26 +1,37 @@
-//import axios from "axios";
 const axios = require('axios');
 const { MongoClient } = require('mongodb');
+const express = require('express');
+
 const uri = "mongodb://127.0.0.1:27017/";
 const client = new MongoClient(uri);
+const app = express();
+const port = 3000;
 
-async function getUserData() {
-		await client.connect();
-      const db = client.db("local");
-      const collection1 = db.collection("tryDB");
-      response1 = await axios.get("https://jsonplaceholder.typicode.com/users/");
-      for (i = 0; i < response1.data.length; i++) {
-         let data = response1.data[i];
-         let options = { upsert: true };
-         data.updatedAt = new Date();
-         let updateSpecs = {
-            $set: data , 
-            $setOnInsert: { createdAt: new Date() }
-         };
-         let filter = {id: response1.data[i].id};
-         await collection1.updateOne ( filter, updateSpecs, options );
+
+app.get("/users/:id", async (req, res) => {
+   await client.connect();
+   const db = client.db("local");
+   const collection1 = db.collection("tryDB");
+
+   response = await axios.get("https://jsonplaceholder.typicode.com/users/",
+   {
+      params: {
+         id: req.params.id
       }
-      await client.close();
-}
+   }
+   );
+   let data = response.data[0];
+   let options = { upsert: true };
+   data.updatedAt = new Date();
+   let updateSpecs = {
+      $set: data , 
+      $setOnInsert: { createdAt: new Date() }
+   };
+   let filter = {id: data.id};
+   await collection1.updateOne ( filter, updateSpecs, options );
+   await client.close();
 
-getUserData();
+   res.send(response.data[0]);
+});
+
+app.listen(port);
